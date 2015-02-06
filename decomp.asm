@@ -23,7 +23,7 @@ VRAMCommReg macro reg,rwd,clr
 ; Checks if we already have a byte stored in d6 and writes a word composed
 ; of the byte in d6 and the byte in d3 to a2 if so
 ; Otherwise, stores byte in d3 to high byte of d6
-ChkWriteWord macro target
+PrintByte macro target
 	tst.b	d0
 	bne.s	.got_high_byte
 	move.b	d3,d6
@@ -57,14 +57,14 @@ SNKDecMain:
 	lsl.l	#4,d1							; number of uncompressed words
 	
 	move.b	(a1)+,d3
-	ChkWriteWord .main_loop
+	PrintByte .main_loop
 	bra.s	SNKDecEnd
 ;----------------------------------------------------------------------------
 .main_loop:
 	move.b	(a1)+,d4
 	cmp.b	d3,d4
 	bne.s	.cont
-	ChkWriteWord .fetch_count
+	PrintByte .fetch_count
 	bra.s	SNKDecEnd
 ;----------------------------------------------------------------------------
 .fetch_count:
@@ -74,12 +74,12 @@ SNKDecMain:
 	tst.b	d5
 	beq.s	.main_loop
 	subq.b	#1,d5
-	ChkWriteWord .copy_loop
+	PrintByte .copy_loop
 	bra.s	SNKDecEnd
 ;----------------------------------------------------------------------------
 .cont:
 	move.b	d4,d3
-	ChkWriteWord .main_loop
+	PrintByte .main_loop
 
 SNKDecEnd:
 	movem.l	(sp)+,d0/d1/d3-a0/a2-a6
