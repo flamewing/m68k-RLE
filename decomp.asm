@@ -54,8 +54,7 @@ SNKDecMain:
 	moveq	#0,d0
 	moveq	#0,d1
 	move.w	(a1)+,d1 
-	lsl.l	#5,d1				; number of uncompressed bytes
-	lsr.l	#1,d1				; number of uncompressed words
+	lsl.l	#4,d1				; number of uncompressed words
 	
 	move.b	(a1)+,d3
 	ChkWriteWord .main_loop
@@ -74,7 +73,7 @@ SNKDecMain:
 .copy_loop:
 	tst.b	d5
 	beq.s	.main_loop
-	sub.b	#1,d5
+	subq.b	#1,d5
 	ChkWriteWord .copy_loop
 	bra.s	SNKDecEnd
 ;----------------------------------------------------------------------------
