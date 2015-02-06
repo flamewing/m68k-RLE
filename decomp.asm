@@ -54,7 +54,7 @@ SNKDecMain:
 	moveq	#0,d0
 	moveq	#0,d1
 	move.w	(a1)+,d1 
-	lsl.l	#4,d1				; number of uncompressed words
+	lsl.l	#4,d1							; number of uncompressed words
 	
 	move.b	(a1)+,d3
 	ChkWriteWord .main_loop
