@@ -1,87 +1,89 @@
+; ===========================================================================
+; values for the rwd argument
+READ = %001100
+WRITE = %000111
+DMA = %100111
+
+VRAMCommReg_defined := 1
+VRAMCommReg macro reg,rwd,clr
+	lsl.l	#2,reg							; Move high bits into (word-swapped) position, accidentally moving everything else
+    if rwd <> READ
+	addq.w	#1,reg							; Add write bit...
+    endif
+	ror.w	#2,reg							; ... and put it into place, also moving all other bits into their correct (word-swapped) places
+	swap	reg								; Put all bits in proper places
+    if clr <> 0
+	andi.w	#3,reg							; Strip whatever junk was in upper word of reg
+    endif
+	if rwd == DMA
+	tas.b	reg								; Add in the DMA bit -- tas fails on memory, but works on registers
+    endif
+    endm
+; ===========================================================================
+; Checks if we already have a byte stored in d6 and writes a word composed
+; of the byte in d6 and the byte in d3 to a2 if so
+; Otherwise, stores byte in d3 to high byte of d6
+ChkWriteWord macro target
+	tst.b	d0
+	bne.s	.got_high_byte
+	move.b	d3,d6
+	lsl.w	#8,d6
+	st.b	d0
+	bra.s	target
+
+.got_high_byte:
+	move.b	d3,d6
+	move.w	d6,(a2)
+	clr.b	d0
+	dbra	d1,target
+    endm
+; ===========================================================================
+; d2 = VRAM address
+; a1 = compressed art to write to VRAM
 SNKDec:
-	move.w #$2700,sr
+	move.w	#$2700,sr
 	movem.l	d0/d1/d3-a0/a2-a6,-(sp)
-    	;d2 = VRAM address
-	;a1 = compressed art to write to VRAM
+
 SNKDecToVRAM:
-	lsl.l	#2,d2 ; Moves all bits around, putting the top ones in (word-swapped) place
-	addq.w	#1,d2 ; Bit for write
-	ror.w	#2,d2 ; Move bits in low word to (word-swapped) place
-	swap d2       ; Put all bits in the proper place
-	andi.w #3,d2  ; Remove junk that might have been at the top half of d2
+	VRAMCommReg d2, WRITE, 1
 	lea	(VDP_data_port).l,a2
-	move.l d2,$4(a2) ;(VDP_control_port).l
-SNKDecMain:	
+	move.l	d2,VDP_control_port-VDP_data_port(a2)
+
+SNKDecMain:
 	;16 words = 1 tile
-	moveq #0,d0
-	moveq #0,d1
+	moveq	#0,d0
+	moveq	#0,d1
 	move.w	(a1)+,d1 
-	lsl.l   #5,d1 ;number of uncompressed bytes
-	lsr.l #1,d1 ;number of uncompressed words
+	lsl.l	#5,d1				; number of uncompressed bytes
+	lsr.l	#1,d1				; number of uncompressed words
 	
 	move.b	(a1)+,d3
-	tst.b d0
-	bne.s +
-	move.b d3,d6
-	lsl.w   #8,d6
-	st d0
-	bra.s ++
-+
-	move.b  d3,d6
-	move.w  d6,(a2)
-	clr.b d0
-	dbf d1,+
-	bra.s SNKDecEnd
-+
--	move.b	(a1)+,d4
-	cmp.b d3,d4
-	bne.s SNKDecCont
-	tst.b d0
-	bne.s +
-	move.b d3,d6
-	lsl.w   #8,d6
-	st d0
-	bra.s ++
-+
-	move.b  d3,d6
-	move.w  d6,(a2)
-	clr.b d0
-	dbf d1,+
-	bra.s SNKDecEnd
-+	
+	ChkWriteWord .main_loop
+	bra.s	SNKDecEnd
+;----------------------------------------------------------------------------
+.main_loop:
+	move.b	(a1)+,d4
+	cmp.b	d3,d4
+	bne.s	.cont
+	ChkWriteWord .fetch_count
+	bra.s	SNKDecEnd
+;----------------------------------------------------------------------------
+.fetch_count:
 	move.b	(a1)+,d5
--
-	tst.b d5
-	beq.s --
-	sub.b #1,d5
-	tst.b d0
-	bne.s +
-	move.b d3,d6
-	lsl.w   #8,d6
-	st d0
-	bra.s -
-+
-	move.b  d3,d6
-	move.w  d6,(a2)
-	clr.b d0
-	dbf d1,-
-	bra.s SNKDecEnd
-	
-SNKDecCont:
-	move.b d4,d3
-	tst.b d0
-	bne.s +
-	move.b d3,d6
-	lsl.w   #8,d6
-	st d0
-	bra.s --
-+
-	move.b  d3,d6
-	move.w  d6,(a2)
-	clr.b d0
-	dbf d1,--
-	
+
+.copy_loop:
+	tst.b	d5
+	beq.s	.main_loop
+	sub.b	#1,d5
+	ChkWriteWord .copy_loop
+	bra.s	SNKDecEnd
+;----------------------------------------------------------------------------
+.cont:
+	move.b	d4,d3
+	ChkWriteWord .main_loop
+
 SNKDecEnd:
-	movem.l (sp)+,d0/d1/d3-a0/a2-a6
-	move.w #$2000,sr
+	movem.l	(sp)+,d0/d1/d3-a0/a2-a6
+	move.w	#$2000,sr
 	rts
+; ===========================================================================
