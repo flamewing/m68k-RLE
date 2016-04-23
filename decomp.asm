@@ -11,18 +11,18 @@ DMA = %100111
 VRAMCommReg_defined := 1
 VRAMCommReg macro reg,rwd,clr
 	lsl.l	#2,reg							; Move high bits into (word-swapped) position, accidentally moving everything else
-    if rwd <> READ
-	addq.w	#1,reg							; Add write bit...
-    endif
+	if rwd <> READ
+		addq.w	#1,reg						; Add write bit...
+	endif
 	ror.w	#2,reg							; ... and put it into place, also moving all other bits into their correct (word-swapped) places
 	swap	reg								; Put all bits in proper places
-    if clr <> 0
-	andi.w	#3,reg							; Strip whatever junk was in upper word of reg
-    endif
+	if clr <> 0
+		andi.w	#3,reg						; Strip whatever junk was in upper word of reg
+	endif
 	if rwd == DMA
-	tas.b	reg								; Add in the DMA bit -- tas fails on memory, but works on registers
-    endif
-    endm
+		tas.b	reg							; Add in the DMA bit -- tas fails on memory, but works on registers
+	endif
+	endm
 ; ===========================================================================
 ; d2 = VRAM address
 ; a1 = compressed art to write to VRAM
@@ -86,18 +86,18 @@ SNKDecMain:
 	; Given all preconditions, we just have to write d6 several times.
 	; Strip off junk in high bits of repetition count.
 	and.w	d0,d5							;  4(1/0)
-    if 1==1
-	; TODO: do we even need this? This would point to an unreliable
-	; compressor which should be fixed...
-	; Do we have a copy count higher than the number of characters remaining?
-	cmp.w	d1,d5							;  4(1/0)
-	; Branch if not.
-	bls.s	.got_count1						; T: 10(2/0); N:  8(1/0)
-	; Cap count to number of bytes remaining.
-	move.w	d1,d5							;  4(1/0)
-	
+	if 1==1
+		; TODO: do we even need this? This would point to an unreliable
+		; compressor which should be fixed...
+		; Do we have a copy count higher than the number of characters remaining?
+		cmp.w	d1,d5						;  4(1/0)
+		; Branch if not.
+		bls.s	.got_count1					; T: 10(2/0); N:  8(1/0)
+		; Cap count to number of bytes remaining.
+		move.w	d1,d5						;  4(1/0)
+
 .got_count1:
-    endif
+	endif
 	; Save count for later.
 	move.w	d5,d4							;  4(1/0)
 	; Strip off low bit, as we will write words.
@@ -188,18 +188,18 @@ SNKDecMain:
 	; Save count for later.
 	move.w	d5,d4							;  4(1/0)
 	; NOTE: preconditions (1), (2), (3), (4) and (5) now valid.
-    if 1==1
-	; TODO: do we even need this? This would point to an unreliable
-	; compressor which should be fixed...
-	; Do we have a copy count higher than the number of characters remaining?
-	cmp.w	d1,d5							;  4(1/0)
-	; Branch if not.
-	bls.s	.got_count2						; T: 10(2/0); N:  8(1/0)
-	; Cap count to number of bytes remaining.
-	move.w	d1,d5							;  4(1/0)
-	
+	if 1==1
+		; TODO: do we even need this? This would point to an unreliable
+		; compressor which should be fixed...
+		; Do we have a copy count higher than the number of characters remaining?
+		cmp.w	d1,d5						;  4(1/0)
+		; Branch if not.
+		bls.s	.got_count2					; T: 10(2/0); N:  8(1/0)
+		; Cap count to number of bytes remaining.
+		move.w	d1,d5						;  4(1/0)
+
 .got_count2:
-    endif
+	endif
 	; Strip off low bit, as we will write words.
 	andi.b	#$FE,d5							;  8(2/0)
 	; Prepare for loop unroll.
